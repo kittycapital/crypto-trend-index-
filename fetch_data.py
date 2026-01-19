@@ -1,6 +1,6 @@
 """
 Crypto Trend Index - Data Fetcher
-Step 1: Bitcoin price only from Binance
+Step 1: Bitcoin price only from CoinGecko
 """
 
 import json
@@ -11,23 +11,18 @@ DATA_FILE = 'data.json'
 
 
 def fetch_bitcoin_price():
-    """Fetch 6 months of daily Bitcoin price from Binance"""
-    url = "https://api.binance.com/api/v3/klines"
+    """Fetch 6 months of daily Bitcoin price from CoinGecko"""
     
-    end_time = int(datetime.now().timestamp() * 1000)
-    start_time = int((datetime.now() - timedelta(days=180)).timestamp() * 1000)
+    # CoinGecko free API - no key needed
+    url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart"
     
     params = {
-        'symbol': 'BTCUSDT',
-        'interval': '1d',
-        'startTime': start_time,
-        'endTime': end_time,
-        'limit': 1000
+        'vs_currency': 'usd',
+        'days': 180,
+        'interval': 'daily'
     }
     
-    print(f"📡 Fetching BTC price from Binance...")
-    print(f"   From: {datetime.fromtimestamp(start_time/1000).strftime('%Y-%m-%d')}")
-    print(f"   To: {datetime.fromtimestamp(end_time/1000).strftime('%Y-%m-%d')}")
+    print(f"📡 Fetching BTC price from CoinGecko...")
     
     response = requests.get(url, params=params)
     response.raise_for_status()
@@ -36,11 +31,15 @@ def fetch_bitcoin_price():
     dates = []
     prices = []
     
-    for candle in data:
-        date = datetime.fromtimestamp(candle[0] / 1000).strftime('%Y-%m-%d')
-        price = float(candle[4])  # Close price
+    for item in data['prices']:
+        timestamp = item[0] / 1000  # Convert milliseconds to seconds
+        date = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d')
+        price = item[1]
         dates.append(date)
         prices.append(round(price, 2))
+    
+    print(f"   From: {dates[0]}")
+    print(f"   To: {dates[-1]}")
     
     return dates, prices
 
@@ -52,11 +51,10 @@ def main():
         dates, prices = fetch_bitcoin_price()
         
         print(f"✅ Got {len(dates)} days of data")
-        print(f"   First date: {dates[0]} - ${prices[0]:,.0f}")
-        print(f"   Last date: {dates[-1]} - ${prices[-1]:,.0f}")
+        print(f"   First: {dates[0]} - ${prices[0]:,.0f}")
+        print(f"   Last: {dates[-1]} - ${prices[-1]:,.0f}")
         
         # Create placeholder trend index (same length as prices)
-        # Will be replaced with real Google Trends data later
         trend_index = [50.0] * len(dates)
         
         output = {
