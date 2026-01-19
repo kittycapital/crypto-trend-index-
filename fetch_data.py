@@ -1,17 +1,25 @@
 """
 Crypto Trend Index - Data Fetcher
-Bitcoin price from CoinGecko + Google Trends from pytrends (free, no API key)
+Bitcoin price from CoinGecko + Google Trends from SerpAPI
+Automatically fetches last 6 months of data
 """
 
+import os
 import json
 import requests
 from datetime import datetime, timedelta
-from pytrends.request import TrendReq
-import time
 
 # Configuration
+SERPAPI_KEY = os.environ.get('SERPAPI_KEY')
 KEYWORDS = ['Bitcoin', 'Crypto', 'Binance', 'CoinMarketCap', 'DefiLlama']
 DATA_FILE = 'data.json'
+
+
+def get_date_range():
+    """Get date range for last 6 months"""
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=180)
+    return start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')
 
 
 def fetch_bitcoin_price():
@@ -44,51 +52,70 @@ def fetch_bitcoin_price():
     return prices_by_date
 
 
-def fetch_google_trends():
-    """Fetch Google Trends data using pytrends"""
+def fetch_google_trends(keyword, start_date, end_date):
+    """Fetch Google Trends data for a single keyword using SerpAPI"""
     
-    print(f"\n📊 Fetching Google Trends for {len(KEYWORDS)} keywords...")
+    url = "https://serpapi.com/search.json"
+    params = {
+        'engine': 'google_trends',
+        'q': keyword,
+        'date': f'{start_date} {end_date}',
+        'api_key': SERPAPI_KEY
+    }
     
     try:
-        # Initialize pytrends
-        pytrends = TrendReq(hl='en-US', tz=360)
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
         
-        # Build payload with all keywords at once (max 5)
-        pytrends.build_payload(KEYWORDS, cat=0, timeframe='today 6-m', geo='', gprop='')
-        
-        # Get interest over time
-        df = pytrends.interest_over_time()
-        
-        if df.empty:
-            print("   ❌ No data returned")
-            return {}
-        
-        # Calculate average across all keywords for each date
-        trend_index = {}
-        
-        for date, row in df.iterrows():
-            date_str = date.strftime('%Y-%m-%d')
-            values = [row[kw] for kw in KEYWORDS if kw in row]
-            if values:
-                avg = sum(values) / len(values)
-                trend_index[date_str] = round(avg, 1)
-        
-        print(f"   ✅ Got {len(trend_index)} data points")
-        
-        for kw in KEYWORDS:
-            if kw in df.columns:
-                latest = df[kw].iloc[-1]
-                print(f"      - {kw}: {latest}")
-        
-        return trend_index
-        
+        if 'interest_over_time' in data and 'timeline_data' in data['interest_over_time']:
+            timeline = data['interest_over_time']['timeline_data']
+            results = []
+            
+            for item in timeline:
+                if 'timestamp' in item:
+                    timestamp = int(item['timestamp'])
+                    date = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d')
+                    
+                    if item.get('values') and len(item['values']) > 0:
+                        value = item['values'][0].get('extracted_value', 0)
+                        results.append({'date': date, 'value': int(value)})
+            
+            return results
+            
     except Exception as e:
-        print(f"   ❌ Error: {e}")
+        print(f"      ❌ Error: {e}")
+    
+    return []
+
+
+def calculate_trend_index(all_trends_data):
+    """Calculate average trend index from all keywords"""
+    
+    if not all_trends_data:
         return {}
+    
+    date_values = {}
+    
+    for keyword_data in all_trends_data:
+        for item in keyword_data:
+            date = item['date']
+            if date not in date_values:
+                date_values[date] = []
+            date_values[date].append(item['value'])
+    
+    return {
+        date: round(sum(values) / len(values), 1)
+        for date, values in date_values.items()
+    }
 
 
 def main():
     print("🚀 Starting Crypto Trend Index data fetch...\n")
+    
+    # Get 6-month date range
+    start_date, end_date = get_date_range()
+    print(f"📅 Date range: {start_date} to {end_date}\n")
     
     # Step 1: Fetch Bitcoin price
     btc_prices = fetch_bitcoin_price()
@@ -98,7 +125,24 @@ def main():
         return
     
     # Step 2: Fetch Google Trends
-    trend_index = fetch_google_trends()
+    print(f"\n📊 Fetching Google Trends for {len(KEYWORDS)} keywords...")
+    
+    if not SERPAPI_KEY:
+        print("   ❌ SERPAPI_KEY not found")
+        trend_index = {}
+    else:
+        all_trends = []
+        for keyword in KEYWORDS:
+            print(f"   - {keyword}...", end=" ")
+            trends = fetch_google_trends(keyword, start_date, end_date)
+            if trends:
+                all_trends.append(trends)
+                print(f"✅ {len(trends)} points")
+            else:
+                print("❌ failed")
+        
+        trend_index = calculate_trend_index(all_trends)
+        print(f"   ✅ Combined trend index: {len(trend_index)} dates")
     
     # Step 3: Align data
     print("\n🔄 Aligning data...")
@@ -112,11 +156,9 @@ def main():
     for date in all_btc_dates:
         price = btc_prices[date]
         
-        # Find matching or nearest trend index
         if date in trend_index:
             idx = trend_index[date]
         else:
-            # Find nearest trend date within 7 days
             nearest_idx = None
             min_diff = 8
             date_obj = datetime.strptime(date, '%Y-%m-%d')
