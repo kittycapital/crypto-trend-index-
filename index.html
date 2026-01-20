@@ -188,15 +188,15 @@
         <div class="header">
             <div class="title-section">
                 <h1>크립토 트렌드 인덱스</h1>
-                <p>Google Trends sentiment vs Bitcoin price</p>
+                <p>구글 트렌트 센티멘트 vs 비트코인 가격</p>
             </div>
             <div class="stats">
                 <div class="stat-card">
-                    <div class="stat-label">Bitcoin Price</div>
+                    <div class="stat-label">비트코인 가격</div>
                     <div class="stat-value price" id="btc-price">--</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Trend Index</div>
+                    <div class="stat-label">구글 트렌드 인덱스</div>
                     <div class="stat-value index" id="trend-index">--</div>
                 </div>
             </div>
@@ -209,11 +209,11 @@
             <div class="legend">
                 <div class="legend-item">
                     <div class="legend-dot btc"></div>
-                    <span>Bitcoin Price (USD)</span>
+                    <span>비트코인 가격 (USD)</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-dot trend"></div>
-                    <span>Trend Index (0-100)</span>
+                    <span>트렌드 인덱스 (0-100)</span>
                 </div>
             </div>
         </div>
@@ -222,6 +222,8 @@
     </div>
 
     <script>
+        let chartData = null;
+
         async function loadData() {
             try {
                 const response = await fetch('data.json');
@@ -243,34 +245,25 @@
             }).format(price);
         }
 
-        function formatDate(dateStr) {
-            const date = new Date(dateStr + 'T00:00:00');
-            return date.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-            });
-        }
-
         async function initChart() {
-            const data = await loadData();
+            chartData = await loadData();
             
-            if (!data || !data.dates || data.dates.length === 0) {
+            if (!chartData || !chartData.dates || chartData.dates.length === 0) {
                 document.querySelector('.chart-wrapper').innerHTML = 
                     '<div class="loading">Loading chart data...</div>';
                 return;
             }
 
             // Update stats
-            const latestPrice = data.btc_prices[data.btc_prices.length - 1];
-            const latestIndex = data.trend_index[data.trend_index.length - 1];
+            const latestPrice = chartData.btc_prices[chartData.btc_prices.length - 1];
+            const latestIndex = chartData.trend_index[chartData.trend_index.length - 1];
             
             document.getElementById('btc-price').textContent = formatPrice(latestPrice);
             document.getElementById('trend-index').textContent = latestIndex.toFixed(1);
             
-            if (data.last_updated) {
+            if (chartData.last_updated) {
                 document.getElementById('last-updated').textContent = 
-                    `Last updated: ${new Date(data.last_updated).toLocaleDateString('en-US', {
+                    `Last updated: ${new Date(chartData.last_updated).toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric',
@@ -290,11 +283,11 @@
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: data.dates,
+                    labels: chartData.dates,
                     datasets: [
                         {
                             label: 'Bitcoin Price',
-                            data: data.btc_prices,
+                            data: chartData.btc_prices,
                             borderColor: '#71717a',
                             backgroundColor: 'transparent',
                             borderWidth: 2,
@@ -306,7 +299,7 @@
                         },
                         {
                             label: 'Trend Index',
-                            data: data.trend_index,
+                            data: chartData.trend_index,
                             borderColor: '#22d3ee',
                             backgroundColor: gradient,
                             borderWidth: 2.5,
@@ -340,7 +333,15 @@
                             displayColors: true,
                             callbacks: {
                                 title: function(context) {
-                                    return formatDate(context[0].label);
+                                    const index = context[0].dataIndex;
+                                    const dateStr = chartData.dates[index];
+                                    const parts = dateStr.split('-');
+                                    const date = new Date(parts[0], parts[1] - 1, parts[2]);
+                                    return date.toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                    });
                                 },
                                 label: function(context) {
                                     if (context.datasetIndex === 0) {
