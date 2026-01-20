@@ -1,6 +1,6 @@
 """
 Crypto Trend Index - Data Fetcher
-Bitcoin price from CoinGecko + Google Trends from uploaded CSV
+Bitcoin price from CoinGecko + Google Trends from uploaded CSV (already averaged)
 """
 
 import json
@@ -46,9 +46,9 @@ def fetch_bitcoin_price():
 
 
 def parse_google_trends_csv():
-    """Parse Google Trends CSV and calculate average index"""
+    """Parse simple 2-column CSV (Date, Index)"""
     
-    print(f"\n📊 Reading Google Trends from {TRENDS_CSV}...")
+    print(f"\n📊 Reading Trend Index from {TRENDS_CSV}...")
     
     if not Path(TRENDS_CSV).exists():
         print(f"   ❌ {TRENDS_CSV} not found")
@@ -57,28 +57,14 @@ def parse_google_trends_csv():
     trend_index = {}
     
     with open(TRENDS_CSV, 'r', encoding='utf-8') as f:
-        # Skip the first 2 lines (Google Trends header info)
-        lines = f.readlines()
+        reader = csv.reader(f)
         
-        # Find the actual data start (line with "Week" or "Day" or date)
-        data_start = 0
-        for i, line in enumerate(lines):
-            if line.startswith('Week') or line.startswith('Day') or line.startswith('20'):
-                data_start = i
-                break
-        
-        # Parse CSV from data start
-        reader = csv.reader(lines[data_start:])
+        # Skip header row
         header = next(reader, None)
-        
-        if not header:
-            print("   ❌ Could not read CSV header")
-            return {}
-        
-        print(f"   📋 Columns found: {header}")
+        print(f"   📋 Header: {header}")
         
         for row in reader:
-            if not row or not row[0]:
+            if not row or len(row) < 2:
                 continue
             
             try:
@@ -86,36 +72,35 @@ def parse_google_trends_csv():
                 date_str = row[0].strip()
                 
                 # Handle different date formats
-                for fmt in ['%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%Y-%m']:
+                date = None
+                for fmt in ['%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%Y-%m', '%d/%m/%Y']:
                     try:
                         date_obj = datetime.strptime(date_str, fmt)
                         date = date_obj.strftime('%Y-%m-%d')
                         break
                     except ValueError:
                         continue
-                else:
+                
+                if not date:
                     continue
                 
-                # Calculate average of all keyword columns
-                values = []
-                for val in row[1:]:
-                    try:
-                        # Handle "<1" values from Google Trends
-                        if '<' in str(val):
-                            values.append(0)
-                        else:
-                            values.append(int(val))
-                    except (ValueError, TypeError):
-                        pass
+                # Parse index value (second column)
+                val = row[1].strip()
+                if '<' in val:
+                    index_val = 0.0
+                else:
+                    index_val = float(val)
                 
-                if values:
-                    avg = sum(values) / len(values)
-                    trend_index[date] = round(avg, 1)
+                trend_index[date] = round(index_val, 1)
                     
             except Exception as e:
                 continue
     
     print(f"   ✅ Got {len(trend_index)} data points from CSV")
+    
+    if trend_index:
+        dates = sorted(trend_index.keys())
+        print(f"   📅 Range: {dates[0]} to {dates[-1]}")
     
     return trend_index
 
