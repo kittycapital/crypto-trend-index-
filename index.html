@@ -6,6 +6,7 @@
     <title>크립토 트렌드 인덱스</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
@@ -90,6 +91,7 @@
             padding: 24px;
             position: relative;
             overflow: hidden;
+            margin-bottom: 16px;
         }
 
         .chart-container::before {
@@ -104,7 +106,19 @@
 
         .chart-wrapper {
             position: relative;
-            height: 400px;
+            height: 350px;
+        }
+
+        .chart-wrapper.indicator {
+            height: 175px;
+        }
+
+        .chart-label {
+            font-size: 0.75rem;
+            color: #71717a;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .legend {
@@ -135,7 +149,7 @@
         }
 
         .legend-dot.trend {
-            background: linear-gradient(135deg, #22d3ee, #a78bfa);
+            background: #ffffff;
         }
 
         .last-updated {
@@ -149,14 +163,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 400px;
+            height: 350px;
             color: #71717a;
-        }
-
-        .error {
-            color: #f87171;
-            text-align: center;
-            padding: 40px;
         }
 
         @media (max-width: 640px) {
@@ -178,7 +186,11 @@
             }
 
             .chart-wrapper {
-                height: 300px;
+                height: 280px;
+            }
+
+            .chart-wrapper.indicator {
+                height: 140px;
             }
         }
     </style>
@@ -188,33 +200,33 @@
         <div class="header">
             <div class="title-section">
                 <h1>크립토 트렌드 인덱스</h1>
-                <p>구글 트렌트 센티멘트 vs 비트코인 가격</p>
+                <p>Google Trends sentiment vs Bitcoin price</p>
             </div>
             <div class="stats">
                 <div class="stat-card">
-                    <div class="stat-label">비트코인 가격</div>
+                    <div class="stat-label">Bitcoin Price</div>
                     <div class="stat-value price" id="btc-price">--</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">구글 트렌드 인덱스</div>
+                    <div class="stat-label">Trend Index</div>
                     <div class="stat-value index" id="trend-index">--</div>
                 </div>
             </div>
         </div>
 
+        <!-- Bitcoin Price Chart -->
         <div class="chart-container">
+            <div class="chart-label">Bitcoin Price (USD)</div>
             <div class="chart-wrapper">
-                <canvas id="chart"></canvas>
+                <canvas id="btcChart"></canvas>
             </div>
-            <div class="legend">
-                <div class="legend-item">
-                    <div class="legend-dot btc"></div>
-                    <span>비트코인 가격 (USD)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot trend"></div>
-                    <span>트렌드 인덱스 (0-100)</span>
-                </div>
+        </div>
+
+        <!-- Trend Index Indicator -->
+        <div class="chart-container">
+            <div class="chart-label">Trend Index</div>
+            <div class="chart-wrapper indicator">
+                <canvas id="trendChart"></canvas>
             </div>
         </div>
 
@@ -245,7 +257,12 @@
             }).format(price);
         }
 
-        async function initChart() {
+        function getDateFromString(dateStr) {
+            const parts = dateStr.split('-');
+            return new Date(parts[0], parts[1] - 1, parts[2]);
+        }
+
+        async function initCharts() {
             chartData = await loadData();
             
             if (!chartData || !chartData.dates || chartData.dates.length === 0) {
@@ -272,15 +289,10 @@
                     })}`;
             }
 
-            // Create chart
-            const ctx = document.getElementById('chart').getContext('2d');
+            // Create Bitcoin Chart
+            const btcCtx = document.getElementById('btcChart').getContext('2d');
             
-            // Create gradient for trend line
-            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            gradient.addColorStop(0, 'rgba(34, 211, 238, 0.3)');
-            gradient.addColorStop(1, 'rgba(34, 211, 238, 0)');
-
-            new Chart(ctx, {
+            new Chart(btcCtx, {
                 type: 'line',
                 data: {
                     labels: chartData.dates,
@@ -294,21 +306,7 @@
                             tension: 0.4,
                             pointRadius: 0,
                             pointHoverRadius: 4,
-                            pointHoverBackgroundColor: '#71717a',
-                            yAxisID: 'y'
-                        },
-                        {
-                            label: 'Trend Index',
-                            data: chartData.trend_index,
-                            borderColor: '#22d3ee',
-                            backgroundColor: gradient,
-                            borderWidth: 2.5,
-                            tension: 0.4,
-                            pointRadius: 0,
-                            pointHoverRadius: 4,
-                            pointHoverBackgroundColor: '#22d3ee',
-                            fill: true,
-                            yAxisID: 'y1'
+                            pointHoverBackgroundColor: '#71717a'
                         }
                     ]
                 },
@@ -330,13 +328,12 @@
                             titleColor: '#e4e4e7',
                             bodyColor: '#a1a1aa',
                             padding: 12,
-                            displayColors: true,
+                            displayColors: false,
                             callbacks: {
                                 title: function(context) {
                                     const index = context[0].dataIndex;
                                     const dateStr = chartData.dates[index];
-                                    const parts = dateStr.split('-');
-                                    const date = new Date(parts[0], parts[1] - 1, parts[2]);
+                                    const date = getDateFromString(dateStr);
                                     return date.toLocaleDateString('en-US', {
                                         month: 'short',
                                         day: 'numeric',
@@ -344,11 +341,7 @@
                                     });
                                 },
                                 label: function(context) {
-                                    if (context.datasetIndex === 0) {
-                                        return ' BTC: ' + formatPrice(context.raw);
-                                    } else {
-                                        return ' Index: ' + context.raw.toFixed(1);
-                                    }
+                                    return 'BTC: ' + formatPrice(context.raw);
                                 }
                             }
                         }
@@ -392,21 +385,164 @@
                                     return '$' + (value / 1000).toFixed(0) + 'k';
                                 }
                             }
+                        }
+                    }
+                }
+            });
+
+            // Create Trend Index Chart
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+
+            new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: chartData.dates,
+                    datasets: [
+                        {
+                            label: 'Trend Index',
+                            data: chartData.trend_index,
+                            borderColor: '#ffffff',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            pointHoverBackgroundColor: '#ffffff'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
                         },
-                        y1: {
+                        tooltip: {
+                            backgroundColor: '#18181b',
+                            borderColor: '#27272a',
+                            borderWidth: 1,
+                            titleColor: '#e4e4e7',
+                            bodyColor: '#a1a1aa',
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                title: function(context) {
+                                    const index = context[0].dataIndex;
+                                    const dateStr = chartData.dates[index];
+                                    const date = getDateFromString(dateStr);
+                                    return date.toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                    });
+                                },
+                                label: function(context) {
+                                    return 'Index: ' + context.raw.toFixed(1);
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                redZone: {
+                                    type: 'box',
+                                    yMin: 65,
+                                    yMax: 100,
+                                    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                                    borderWidth: 0
+                                },
+                                greenZone: {
+                                    type: 'box',
+                                    yMin: 0,
+                                    yMax: 25,
+                                    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                                    borderWidth: 0
+                                },
+                                redLine: {
+                                    type: 'line',
+                                    yMin: 65,
+                                    yMax: 65,
+                                    borderColor: 'rgba(239, 68, 68, 0.8)',
+                                    borderWidth: 1,
+                                    borderDash: [5, 5],
+                                    label: {
+                                        display: true,
+                                        content: '과열 상태',
+                                        position: 'end',
+                                        backgroundColor: 'transparent',
+                                        color: 'rgba(239, 68, 68, 0.9)',
+                                        font: {
+                                            family: "'Noto Sans KR', sans-serif",
+                                            size: 11,
+                                            weight: '500'
+                                        }
+                                    }
+                                },
+                                greenLine: {
+                                    type: 'line',
+                                    yMin: 25,
+                                    yMax: 25,
+                                    borderColor: 'rgba(34, 197, 94, 0.8)',
+                                    borderWidth: 1,
+                                    borderDash: [5, 5],
+                                    label: {
+                                        display: true,
+                                        content: '무관심',
+                                        position: 'end',
+                                        backgroundColor: 'transparent',
+                                        color: 'rgba(34, 197, 94, 0.9)',
+                                        font: {
+                                            family: "'Noto Sans KR', sans-serif",
+                                            size: 11,
+                                            weight: '500'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'week',
+                                displayFormats: {
+                                    week: 'MMM d'
+                                }
+                            },
+                            grid: {
+                                color: '#27272a',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#52525b',
+                                font: {
+                                    family: "'JetBrains Mono', monospace",
+                                    size: 11
+                                },
+                                maxTicksLimit: 8
+                            }
+                        },
+                        y: {
                             type: 'linear',
                             position: 'right',
                             min: 0,
                             max: 100,
                             grid: {
-                                display: false
+                                color: '#27272a',
+                                drawBorder: false
                             },
                             ticks: {
-                                color: '#22d3ee',
+                                color: '#52525b',
                                 font: {
                                     family: "'JetBrains Mono', monospace",
                                     size: 11
-                                }
+                                },
+                                stepSize: 25
                             }
                         }
                     }
@@ -414,7 +550,7 @@
             });
         }
 
-        initChart();
+        initCharts();
     </script>
 </body>
 </html>
