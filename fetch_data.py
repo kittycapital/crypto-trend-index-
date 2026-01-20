@@ -1,25 +1,18 @@
 """
 Crypto Trend Index - Data Fetcher
-Bitcoin price from CoinGecko + Google Trends from SerpAPI
-Automatically fetches last 6 months of data
+Bitcoin price from CoinGecko + Google Trends from uploaded CSV
 """
 
-import os
 import json
 import requests
-from datetime import datetime, timedelta
+import csv
+from datetime import datetime
+from pathlib import Path
 
 # Configuration
-SERPAPI_KEY = os.environ.get('SERPAPI_KEY')
 KEYWORDS = ['Bitcoin', 'Crypto', 'Binance', 'CoinMarketCap', 'DefiLlama']
 DATA_FILE = 'data.json'
-
-
-def get_date_range():
-    """Get date range for last 6 months"""
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=180)
-    return start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')
+TRENDS_CSV = 'trends.csv'
 
 
 def fetch_bitcoin_price():
@@ -52,70 +45,83 @@ def fetch_bitcoin_price():
     return prices_by_date
 
 
-def fetch_google_trends(keyword, start_date, end_date):
-    """Fetch Google Trends data for a single keyword using SerpAPI"""
+def parse_google_trends_csv():
+    """Parse Google Trends CSV and calculate average index"""
     
-    url = "https://serpapi.com/search.json"
-    params = {
-        'engine': 'google_trends',
-        'q': keyword,
-        'date': f'{start_date} {end_date}',
-        'api_key': SERPAPI_KEY
-    }
+    print(f"\n📊 Reading Google Trends from {TRENDS_CSV}...")
     
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        
-        if 'interest_over_time' in data and 'timeline_data' in data['interest_over_time']:
-            timeline = data['interest_over_time']['timeline_data']
-            results = []
-            
-            for item in timeline:
-                if 'timestamp' in item:
-                    timestamp = int(item['timestamp'])
-                    date = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d')
-                    
-                    if item.get('values') and len(item['values']) > 0:
-                        value = item['values'][0].get('extracted_value', 0)
-                        results.append({'date': date, 'value': int(value)})
-            
-            return results
-            
-    except Exception as e:
-        print(f"      ❌ Error: {e}")
-    
-    return []
-
-
-def calculate_trend_index(all_trends_data):
-    """Calculate average trend index from all keywords"""
-    
-    if not all_trends_data:
+    if not Path(TRENDS_CSV).exists():
+        print(f"   ❌ {TRENDS_CSV} not found")
         return {}
     
-    date_values = {}
+    trend_index = {}
     
-    for keyword_data in all_trends_data:
-        for item in keyword_data:
-            date = item['date']
-            if date not in date_values:
-                date_values[date] = []
-            date_values[date].append(item['value'])
+    with open(TRENDS_CSV, 'r', encoding='utf-8') as f:
+        # Skip the first 2 lines (Google Trends header info)
+        lines = f.readlines()
+        
+        # Find the actual data start (line with "Week" or "Day" or date)
+        data_start = 0
+        for i, line in enumerate(lines):
+            if line.startswith('Week') or line.startswith('Day') or line.startswith('20'):
+                data_start = i
+                break
+        
+        # Parse CSV from data start
+        reader = csv.reader(lines[data_start:])
+        header = next(reader, None)
+        
+        if not header:
+            print("   ❌ Could not read CSV header")
+            return {}
+        
+        print(f"   📋 Columns found: {header}")
+        
+        for row in reader:
+            if not row or not row[0]:
+                continue
+            
+            try:
+                # Parse date (first column)
+                date_str = row[0].strip()
+                
+                # Handle different date formats
+                for fmt in ['%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%Y-%m']:
+                    try:
+                        date_obj = datetime.strptime(date_str, fmt)
+                        date = date_obj.strftime('%Y-%m-%d')
+                        break
+                    except ValueError:
+                        continue
+                else:
+                    continue
+                
+                # Calculate average of all keyword columns
+                values = []
+                for val in row[1:]:
+                    try:
+                        # Handle "<1" values from Google Trends
+                        if '<' in str(val):
+                            values.append(0)
+                        else:
+                            values.append(int(val))
+                    except (ValueError, TypeError):
+                        pass
+                
+                if values:
+                    avg = sum(values) / len(values)
+                    trend_index[date] = round(avg, 1)
+                    
+            except Exception as e:
+                continue
     
-    return {
-        date: round(sum(values) / len(values), 1)
-        for date, values in date_values.items()
-    }
+    print(f"   ✅ Got {len(trend_index)} data points from CSV")
+    
+    return trend_index
 
 
 def main():
     print("🚀 Starting Crypto Trend Index data fetch...\n")
-    
-    # Get 6-month date range
-    start_date, end_date = get_date_range()
-    print(f"📅 Date range: {start_date} to {end_date}\n")
     
     # Step 1: Fetch Bitcoin price
     btc_prices = fetch_bitcoin_price()
@@ -124,25 +130,8 @@ def main():
         print("❌ Error: Could not fetch Bitcoin price")
         return
     
-    # Step 2: Fetch Google Trends
-    print(f"\n📊 Fetching Google Trends for {len(KEYWORDS)} keywords...")
-    
-    if not SERPAPI_KEY:
-        print("   ❌ SERPAPI_KEY not found")
-        trend_index = {}
-    else:
-        all_trends = []
-        for keyword in KEYWORDS:
-            print(f"   - {keyword}...", end=" ")
-            trends = fetch_google_trends(keyword, start_date, end_date)
-            if trends:
-                all_trends.append(trends)
-                print(f"✅ {len(trends)} points")
-            else:
-                print("❌ failed")
-        
-        trend_index = calculate_trend_index(all_trends)
-        print(f"   ✅ Combined trend index: {len(trend_index)} dates")
+    # Step 2: Read Google Trends CSV
+    trend_index = parse_google_trends_csv()
     
     # Step 3: Align data
     print("\n🔄 Aligning data...")
@@ -159,6 +148,7 @@ def main():
         if date in trend_index:
             idx = trend_index[date]
         else:
+            # Find nearest trend date within 7 days
             nearest_idx = None
             min_diff = 8
             date_obj = datetime.strptime(date, '%Y-%m-%d')
