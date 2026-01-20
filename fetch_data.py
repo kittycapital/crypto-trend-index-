@@ -1,6 +1,7 @@
 """
 Crypto Trend Index - Data Fetcher
-Bitcoin price from CoinGecko + Google Trends from uploaded CSV (already averaged)
+Bitcoin price from CoinGecko + Google Trends from uploaded CSV
+Supports both 6-month and 12-month data
 """
 
 import json
@@ -12,21 +13,22 @@ from pathlib import Path
 # Configuration
 KEYWORDS = ['Bitcoin', 'Crypto', 'Binance', 'CoinMarketCap', 'DefiLlama']
 DATA_FILE = 'data.json'
-TRENDS_CSV = 'trends.csv'
+TRENDS_CSV_6M = 'trends.csv'
+TRENDS_CSV_12M = 'trends12.csv'
 
 
-def fetch_bitcoin_price():
-    """Fetch 6 months of daily Bitcoin price from CoinGecko"""
+def fetch_bitcoin_price(days):
+    """Fetch Bitcoin price from CoinGecko"""
     
     url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart"
     
     params = {
         'vs_currency': 'usd',
-        'days': 180,
+        'days': days,
         'interval': 'daily'
     }
     
-    print("📡 Fetching BTC price from CoinGecko...")
+    print(f"📡 Fetching BTC price ({days} days) from CoinGecko...")
     
     response = requests.get(url, params=params)
     response.raise_for_status()
@@ -45,18 +47,18 @@ def fetch_bitcoin_price():
     return prices_by_date
 
 
-def parse_google_trends_csv():
+def parse_google_trends_csv(filename):
     """Parse simple 2-column CSV (Date, Index)"""
     
-    print(f"\n📊 Reading Trend Index from {TRENDS_CSV}...")
+    print(f"\n📊 Reading Trend Index from {filename}...")
     
-    if not Path(TRENDS_CSV).exists():
-        print(f"   ❌ {TRENDS_CSV} not found")
+    if not Path(filename).exists():
+        print(f"   ⚠️ {filename} not found")
         return {}
     
     trend_index = {}
     
-    with open(TRENDS_CSV, 'r', encoding='utf-8') as f:
+    with open(filename, 'r', encoding='utf-8') as f:
         reader = csv.reader(f)
         
         # Skip header row
@@ -105,21 +107,8 @@ def parse_google_trends_csv():
     return trend_index
 
 
-def main():
-    print("🚀 Starting Crypto Trend Index data fetch...\n")
-    
-    # Step 1: Fetch Bitcoin price
-    btc_prices = fetch_bitcoin_price()
-    
-    if not btc_prices:
-        print("❌ Error: Could not fetch Bitcoin price")
-        return
-    
-    # Step 2: Read Google Trends CSV
-    trend_index = parse_google_trends_csv()
-    
-    # Step 3: Align data
-    print("\n🔄 Aligning data...")
+def align_data(btc_prices, trend_index):
+    """Align Bitcoin prices with trend index data"""
     
     all_btc_dates = sorted(btc_prices.keys())
     
@@ -151,13 +140,47 @@ def main():
         final_prices.append(price)
         final_index.append(idx)
     
-    print(f"   ✅ Aligned {len(final_dates)} data points")
+    return final_dates, final_prices, final_index
+
+
+def main():
+    print("🚀 Starting Crypto Trend Index data fetch...\n")
     
-    # Step 4: Save to JSON
+    # ===== 6-MONTH DATA =====
+    print("=" * 50)
+    print("Processing 6-MONTH data...")
+    print("=" * 50)
+    
+    btc_prices_6m = fetch_bitcoin_price(180)
+    trend_index_6m = parse_google_trends_csv(TRENDS_CSV_6M)
+    
+    print("\n🔄 Aligning 6-month data...")
+    dates_6m, prices_6m, index_6m = align_data(btc_prices_6m, trend_index_6m)
+    print(f"   ✅ Aligned {len(dates_6m)} data points")
+    
+    # ===== 12-MONTH DATA =====
+    print("\n" + "=" * 50)
+    print("Processing 12-MONTH data...")
+    print("=" * 50)
+    
+    btc_prices_12m = fetch_bitcoin_price(365)
+    trend_index_12m = parse_google_trends_csv(TRENDS_CSV_12M)
+    
+    print("\n🔄 Aligning 12-month data...")
+    dates_12m, prices_12m, index_12m = align_data(btc_prices_12m, trend_index_12m)
+    print(f"   ✅ Aligned {len(dates_12m)} data points")
+    
+    # ===== SAVE DATA =====
     output = {
-        'dates': final_dates,
-        'btc_prices': final_prices,
-        'trend_index': final_index,
+        # 6-month data (default)
+        'dates': dates_6m,
+        'btc_prices': prices_6m,
+        'trend_index': index_6m,
+        # 12-month data
+        'dates_12m': dates_12m,
+        'btc_prices_12m': prices_12m,
+        'trend_index_12m': index_12m,
+        # Metadata
         'last_updated': datetime.utcnow().isoformat() + 'Z',
         'keywords': KEYWORDS
     }
@@ -166,9 +189,12 @@ def main():
         json.dump(output, f, indent=2)
     
     print(f"\n💾 Saved to {DATA_FILE}")
-    print(f"   📅 Date range: {final_dates[0]} to {final_dates[-1]}")
-    print(f"   💰 Latest BTC: ${final_prices[-1]:,.0f}")
-    print(f"   📈 Latest Index: {final_index[-1]}")
+    print(f"\n📊 Summary:")
+    print(f"   6M: {dates_6m[0]} to {dates_6m[-1]} ({len(dates_6m)} days)")
+    print(f"   12M: {dates_12m[0]} to {dates_12m[-1]} ({len(dates_12m)} days)")
+    print(f"   💰 Latest BTC: ${prices_6m[-1]:,.0f}")
+    print(f"   📈 Latest Index (6M): {index_6m[-1]}")
+    print(f"   📈 Latest Index (12M): {index_12m[-1]}")
 
 
 if __name__ == '__main__':
