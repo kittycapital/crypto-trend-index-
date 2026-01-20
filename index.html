@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Trend Index</title>
+    <title>크립토 트렌드 인덱스</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -19,7 +19,7 @@
         body {
             background: #0a0a0f;
             color: #e4e4e7;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Noto Sans KR', sans-serif;
             min-height: 100vh;
             padding: 24px;
         }
@@ -43,10 +43,7 @@
             font-weight: 600;
             letter-spacing: -0.02em;
             margin-bottom: 6px;
-            background: linear-gradient(135deg, #22d3ee, #a78bfa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: #ffffff;
         }
 
         .title-section p {
@@ -141,34 +138,6 @@
             background: linear-gradient(135deg, #22d3ee, #a78bfa);
         }
 
-        .keywords {
-            margin-top: 24px;
-            text-align: center;
-        }
-
-        .keywords-label {
-            font-size: 0.75rem;
-            color: #52525b;
-            margin-bottom: 8px;
-        }
-
-        .keyword-tags {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .keyword-tag {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            color: #a1a1aa;
-            background: #18181b;
-            border: 1px solid #27272a;
-            padding: 4px 12px;
-            border-radius: 100px;
-        }
-
         .last-updated {
             text-align: center;
             margin-top: 16px;
@@ -218,7 +187,7 @@
     <div class="container">
         <div class="header">
             <div class="title-section">
-                <h1>Crypto Trend Index</h1>
+                <h1>크립토 트렌드 인덱스</h1>
                 <p>Google Trends sentiment vs Bitcoin price</p>
             </div>
             <div class="stats">
@@ -249,17 +218,6 @@
             </div>
         </div>
 
-        <div class="keywords">
-            <div class="keywords-label">Index based on search interest for:</div>
-            <div class="keyword-tags">
-                <span class="keyword-tag">Bitcoin</span>
-                <span class="keyword-tag">Crypto</span>
-                <span class="keyword-tag">Binance</span>
-                <span class="keyword-tag">CoinMarketCap</span>
-                <span class="keyword-tag">DefiLlama</span>
-            </div>
-        </div>
-
         <div class="last-updated" id="last-updated"></div>
     </div>
 
@@ -283,6 +241,15 @@
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
             }).format(price);
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
         }
 
         async function initChart() {
@@ -373,11 +340,7 @@
                             displayColors: true,
                             callbacks: {
                                 title: function(context) {
-                                    return new Date(context[0].label).toLocaleDateString('en-US', {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        year: 'numeric'
-                                    });
+                                    return formatDate(context[0].label);
                                 },
                                 label: function(context) {
                                     if (context.datasetIndex === 0) {
