@@ -84,6 +84,30 @@
             color: #22d3ee;
         }
 
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.625rem;
+            color: #22c55e;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 4px;
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
         /* Tab Styles */
         .tabs {
             display: flex;
@@ -152,6 +176,26 @@
             letter-spacing: 0.05em;
         }
 
+        /* Zone labels outside chart */
+        .zone-label {
+            font-family: 'Noto Sans KR', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            text-align: right;
+            padding-right: 8px;
+        }
+
+        .zone-label.overheat {
+            color: rgba(239, 68, 68, 0.9);
+            margin-bottom: 8px;
+        }
+
+        .zone-label.indifference {
+            color: rgba(34, 197, 94, 0.9);
+            margin-top: 8px;
+        }
+
         .last-updated {
             text-align: center;
             margin-top: 16px;
@@ -206,6 +250,10 @@
                 <div class="stat-card">
                     <div class="stat-label">Bitcoin Price</div>
                     <div class="stat-value price" id="btc-price">--</div>
+                    <div class="live-indicator" id="live-indicator" style="display: none;">
+                        <span class="live-dot"></span>
+                        <span>Live</span>
+                    </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Trend Index</div>
@@ -231,9 +279,11 @@
         <!-- Trend Index Indicator -->
         <div class="chart-container">
             <div class="chart-label">Trend Index</div>
+            <div class="zone-label overheat">과열상태 ▲</div>
             <div class="chart-wrapper indicator">
                 <canvas id="trendChart"></canvas>
             </div>
+            <div class="zone-label indifference">무관심 ▼</div>
         </div>
 
         <div class="last-updated" id="last-updated"></div>
@@ -244,6 +294,8 @@
         let btcChart = null;
         let trendChart = null;
         let currentPeriod = '6m';
+        let binanceSocket = null;
+        let livePrice = null;
 
         async function loadData() {
             try {
@@ -287,11 +339,42 @@
         }
 
         function updateStats(data) {
-            const latestPrice = data.btc_prices[data.btc_prices.length - 1];
+            // Use live price if available, otherwise use chart data
+            const latestPrice = livePrice || data.btc_prices[data.btc_prices.length - 1];
             const latestIndex = data.trend_index[data.trend_index.length - 1];
             
             document.getElementById('btc-price').textContent = formatPrice(latestPrice);
             document.getElementById('trend-index').textContent = latestIndex.toFixed(1);
+        }
+
+        // Binance WebSocket for real-time BTC price
+        function connectBinanceWebSocket() {
+            try {
+                binanceSocket = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker');
+                
+                binanceSocket.onopen = function() {
+                    console.log('Binance WebSocket connected');
+                    document.getElementById('live-indicator').style.display = 'inline-flex';
+                };
+                
+                binanceSocket.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    livePrice = parseFloat(data.c); // 'c' is the current price
+                    document.getElementById('btc-price').textContent = formatPrice(livePrice);
+                };
+                
+                binanceSocket.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                };
+                
+                binanceSocket.onclose = function() {
+                    console.log('WebSocket closed, reconnecting in 5s...');
+                    document.getElementById('live-indicator').style.display = 'none';
+                    setTimeout(connectBinanceWebSocket, 5000);
+                };
+            } catch (error) {
+                console.error('Failed to connect WebSocket:', error);
+            }
         }
 
         function createBtcChart(data) {
@@ -380,7 +463,7 @@
                         },
                         y: {
                             type: 'linear',
-                            position: 'left',
+                            position: 'right',
                             grid: {
                                 color: '#27272a',
                                 drawBorder: false
@@ -483,19 +566,7 @@
                                     yMax: 65,
                                     borderColor: 'rgba(239, 68, 68, 0.8)',
                                     borderWidth: 1,
-                                    borderDash: [5, 5],
-                                    label: {
-                                        display: true,
-                                        content: '과열 상태',
-                                        position: 'end',
-                                        backgroundColor: 'transparent',
-                                        color: 'rgba(239, 68, 68, 0.9)',
-                                        font: {
-                                            family: "'Noto Sans KR', sans-serif",
-                                            size: 11,
-                                            weight: '500'
-                                        }
-                                    }
+                                    borderDash: [5, 5]
                                 },
                                 greenLine: {
                                     type: 'line',
@@ -503,19 +574,7 @@
                                     yMax: 25,
                                     borderColor: 'rgba(34, 197, 94, 0.8)',
                                     borderWidth: 1,
-                                    borderDash: [5, 5],
-                                    label: {
-                                        display: true,
-                                        content: '무관심',
-                                        position: 'end',
-                                        backgroundColor: 'transparent',
-                                        color: 'rgba(34, 197, 94, 0.9)',
-                                        font: {
-                                            family: "'Noto Sans KR', sans-serif",
-                                            size: 11,
-                                            weight: '500'
-                                        }
-                                    }
+                                    borderDash: [5, 5]
                                 }
                             }
                         }
@@ -614,6 +673,9 @@
                     switchPeriod(tab.dataset.period);
                 });
             });
+
+            // Connect to Binance WebSocket for real-time price
+            connectBinanceWebSocket();
         }
 
         init();
