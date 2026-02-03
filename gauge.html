@@ -32,7 +32,7 @@
         }
 
         .title {
-            font-size: 1.75rem;
+            font-size: 1.25rem;
             font-weight: 600;
             color: #ffffff;
             margin-bottom: 24px;
@@ -41,8 +41,8 @@
 
         .gauge-container {
             position: relative;
-            width: 280px;
-            height: 160px;
+            width: 300px;
+            height: 200px;
             margin: 0 auto 16px;
         }
 
@@ -59,16 +59,13 @@
             stroke-linecap: butt;
         }
 
+        /* 3 zones: 무관심, 중립, 과열상태 */
         .segment-green {
             stroke: #22c55e;
         }
 
         .segment-yellow {
             stroke: #eab308;
-        }
-
-        .segment-orange {
-            stroke: #f97316;
         }
 
         .segment-red {
@@ -80,7 +77,7 @@
             fill: #22d3ee;
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
             transition: transform 1s cubic-bezier(0.34, 1.56, 0.64, 1);
-            transform-origin: 140px 140px;
+            transform-origin: 150px 150px;
         }
 
         .needle-center {
@@ -134,9 +131,9 @@
         .zone-markers {
             display: flex;
             justify-content: space-between;
-            width: 280px;
+            width: 300px;
             margin: 8px auto 0;
-            padding: 0 8px;
+            padding: 0 12px;
         }
 
         .zone-marker {
@@ -159,8 +156,8 @@
 
         @media (max-width: 400px) {
             .gauge-container {
-                width: 240px;
-                height: 140px;
+                width: 260px;
+                height: 170px;
             }
 
             .value {
@@ -168,7 +165,7 @@
             }
 
             .zone-markers {
-                width: 240px;
+                width: 260px;
             }
         }
     </style>
@@ -178,28 +175,25 @@
         <h1 class="title">크립토 트렌드 인덱스</h1>
         
         <div class="gauge-container">
-            <svg class="gauge-svg" viewBox="0 0 280 160">
-                <!-- Gauge background segments -->
+            <svg class="gauge-svg" viewBox="0 0 300 180">
+                <!-- Gauge background segments (3 zones) -->
                 <!-- Green: 0-25 (무관심) -->
                 <path class="gauge-segment segment-green" 
-                      d="M 28 140 A 112 112 0 0 1 53.5 62.5" />
-                <!-- Yellow: 25-50 (중립 lower) -->
+                      d="M 25 150 A 125 125 0 0 1 57 62" />
+                <!-- Yellow: 25-65 (중립) -->
                 <path class="gauge-segment segment-yellow" 
-                      d="M 53.5 62.5 A 112 112 0 0 1 140 28" />
-                <!-- Orange: 50-65 (중립 upper) -->
-                <path class="gauge-segment segment-orange" 
-                      d="M 140 28 A 112 112 0 0 1 199.5 47" />
+                      d="M 57 62 A 125 125 0 0 1 220 45" />
                 <!-- Red: 65-100 (과열상태) -->
                 <path class="gauge-segment segment-red" 
-                      d="M 199.5 47 A 112 112 0 0 1 252 140" />
+                      d="M 220 45 A 125 125 0 0 1 275 150" />
                 
                 <!-- Needle (will be rotated via JS) -->
                 <g class="needle" id="needle">
-                    <polygon points="140,50 134,140 140,130 146,140" />
+                    <polygon points="150,45 144,150 150,140 156,150" />
                 </g>
                 
                 <!-- Center circle -->
-                <circle class="needle-center" cx="140" cy="140" r="8" />
+                <circle class="needle-center" cx="150" cy="150" r="8" />
             </svg>
             
             <div class="value-container">
