@@ -1,684 +1,268 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>크립토 트렌드 인덱스</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>크립토 트렌드 인덱스</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{scrollbar-width:none}
+html::-webkit-scrollbar{display:none}
+body{background:#000;color:#e4e4e7;font-family:'Noto Sans KR',sans-serif;min-height:100vh}
 
-        body {
-            background: #0a0a0f;
-            color: #e4e4e7;
-            font-family: 'Noto Sans KR', sans-serif;
-            min-height: 100vh;
-            padding: 24px;
-        }
+/* Nav */
+.top-nav{position:sticky;top:0;z-index:100;background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);border-bottom:1px solid #1a1a1a;padding:0 16px;display:flex;align-items:center;justify-content:center;height:52px}
+.nav-title{font-size:14px;font-weight:600;color:#e4e4e7;white-space:nowrap}
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+/* Container */
+.container{max-width:960px;margin:0 auto;padding:16px 12px 60px}
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-            gap: 16px;
-        }
+/* Header */
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:16px}
+.title-sub{font-size:12px;color:#71717a;margin-top:2px}
+.stats{display:flex;gap:10px;flex-wrap:wrap}
+.stat-card{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:10px;padding:14px 16px;text-align:right}
+.stat-label{font-size:11px;color:#71717a;font-weight:500;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em}
+.stat-value{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700}
+.stat-value.price{color:#e4e4e7}
+.stat-value.index{color:#a78bfa}
 
-        .title-section h1 {
-            font-size: 1.75rem;
-            font-weight: 600;
-            letter-spacing: -0.02em;
-            margin-bottom: 6px;
-            color: #ffffff;
-        }
+.live-indicator{display:inline-flex;align-items:center;gap:6px;font-size:10px;color:#22c55e;text-transform:uppercase;letter-spacing:0.05em;margin-top:4px}
+.live-dot{width:6px;height:6px;background:#22c55e;border-radius:50%;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 
-        .title-section p {
-            font-size: 0.875rem;
-            color: #71717a;
-        }
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:16px}
+.tab{padding:6px 16px;background:#111;border:1px solid #1a1a1a;border-radius:6px;color:#a1a1aa;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s}
+.tab:hover{border-color:#333;color:#e4e4e7}
+.tab.active{background:#a78bfa;border-color:#a78bfa;color:#000;font-weight:600}
 
-        .stats {
-            display: flex;
-            gap: 32px;
-            flex-wrap: wrap;
-        }
+/* Card */
+.card{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:12px;padding:16px;margin-bottom:16px;position:relative}
 
-        .stat-card {
-            text-align: right;
-        }
+/* Chart */
+.chart-wrapper{position:relative;height:350px}
+.chart-wrapper.indicator{height:175px}
+.chart-label{font-size:11px;color:#71717a;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:500}
 
-        .stat-label {
-            font-size: 0.75rem;
-            color: #71717a;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 4px;
-        }
+/* Zone labels */
+.zone-label{font-size:11px;font-weight:500;letter-spacing:0.02em;text-align:right;padding-right:8px}
+.zone-label.overheat{color:rgba(239,68,68,0.9);margin-bottom:6px}
+.zone-label.indifference{color:rgba(34,197,94,0.9);margin-top:6px}
 
-        .stat-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.5rem;
-            font-weight: 600;
-        }
+/* Watermark */
+.watermark::after{content:'Herdvibe.com';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:600;color:rgba(255,255,255,0.06);pointer-events:none;z-index:2;letter-spacing:2px}
 
-        .stat-value.price {
-            color: #e4e4e7;
-        }
+/* Share */
+.share-bar{display:flex;gap:6px;justify-content:center;margin:12px 0 4px;flex-wrap:wrap}
+.share-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:6px;border:1px solid #222;background:#0a0a0a;color:#a1a1aa;font-size:11px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all 0.2s}
+.share-btn:hover{border-color:#444;color:#e4e4e7}
+.share-btn svg{width:14px;height:14px;flex-shrink:0}
+.share-btn.twitter:hover{border-color:#1d9bf0;color:#1d9bf0}
+.share-btn.kakao:hover{border-color:#fee500;color:#fee500}
+.share-btn.telegram:hover{border-color:#26a5e4;color:#26a5e4}
+.share-btn.instagram:hover{border-color:#e1306c;color:#e1306c}
+.share-btn.instagram.copied{border-color:#22c55e;color:#22c55e}
+.share-btn.copy:hover{border-color:#22c55e;color:#22c55e}
+.share-btn.copied{border-color:#22c55e;color:#22c55e}
 
-        .stat-value.index {
-            color: #22d3ee;
-        }
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:#22c55e;color:#000;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transform:translateY(10px);transition:all 0.3s ease;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
 
-        .live-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.625rem;
-            color: #22c55e;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-top: 4px;
-        }
+.last-updated{text-align:center;font-size:11px;color:#52525b;margin-top:8px}
+.loading{display:flex;align-items:center;justify-content:center;height:350px;color:#71717a;gap:8px;font-size:13px}
+.spinner{width:18px;height:18px;border:2px solid #333;border-top-color:#a78bfa;border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-        .live-dot {
-            width: 6px;
-            height: 6px;
-            background: #22c55e;
-            border-radius: 50%;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-
-        /* Tab Styles */
-        .tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-
-        .tab {
-            padding: 8px 20px;
-            background: #18181b;
-            border: 1px solid #27272a;
-            border-radius: 8px;
-            color: #71717a;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .tab:hover {
-            background: #27272a;
-            color: #a1a1aa;
-        }
-
-        .tab.active {
-            background: #22d3ee;
-            border-color: #22d3ee;
-            color: #0a0a0f;
-        }
-
-        .chart-container {
-            background: linear-gradient(180deg, #111118 0%, #0a0a0f 100%);
-            border: 1px solid #27272a;
-            border-radius: 16px;
-            padding: 24px;
-            position: relative;
-            overflow: hidden;
-            margin-bottom: 16px;
-        }
-
-        .chart-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, #22d3ee33, transparent);
-        }
-
-        .chart-wrapper {
-            position: relative;
-            height: 350px;
-        }
-
-        .chart-wrapper.indicator {
-            height: 175px;
-        }
-
-        .chart-label {
-            font-size: 0.75rem;
-            color: #71717a;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        /* Zone labels outside chart */
-        .zone-label {
-            font-family: 'Noto Sans KR', sans-serif;
-            font-size: 0.75rem;
-            font-weight: 500;
-            letter-spacing: 0.02em;
-            text-align: right;
-            padding-right: 8px;
-        }
-
-        .zone-label.overheat {
-            color: rgba(239, 68, 68, 0.9);
-            margin-bottom: 8px;
-        }
-
-        .zone-label.indifference {
-            color: rgba(34, 197, 94, 0.9);
-            margin-top: 8px;
-        }
-
-        .last-updated {
-            text-align: center;
-            margin-top: 16px;
-            font-size: 0.75rem;
-            color: #52525b;
-        }
-
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 350px;
-            color: #71717a;
-        }
-
-        @media (max-width: 640px) {
-            body {
-                padding: 16px;
-            }
-
-            .header {
-                flex-direction: column;
-            }
-
-            .stats {
-                width: 100%;
-                justify-content: space-between;
-            }
-
-            .stat-card {
-                text-align: left;
-            }
-
-            .chart-wrapper {
-                height: 280px;
-            }
-
-            .chart-wrapper.indicator {
-                height: 140px;
-            }
-        }
-    </style>
+@media(max-width:640px){
+  .top-nav{padding:0 10px}
+  .nav-title{font-size:12px}
+  .header{flex-direction:column}
+  .stats{width:100%;justify-content:space-between}
+  .stat-card{text-align:left;flex:1}
+  .stat-value{font-size:16px}
+  .chart-wrapper{height:280px}
+  .chart-wrapper.indicator{height:140px}
+  .watermark::after{font-size:20px}
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="title-section">
-                <h1>크립토 트렌드 인덱스</h1>
-                <p>Google Trends sentiment vs Bitcoin price</p>
-            </div>
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-label">Bitcoin Price</div>
-                    <div class="stat-value price" id="btc-price">--</div>
-                    <div class="live-indicator" id="live-indicator" style="display: none;">
-                        <span class="live-dot"></span>
-                        <span>Live</span>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Trend Index</div>
-                    <div class="stat-value index" id="trend-index">--</div>
+
+<nav class="top-nav">
+    <div class="nav-title">크립토 트렌드 인덱스</div>
+</nav>
+
+<div class="container">
+    <div class="header">
+        <div>
+            <div class="title-sub">Google Trends sentiment vs Bitcoin price</div>
+        </div>
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Bitcoin Price</div>
+                <div class="stat-value price" id="btc-price">--</div>
+                <div class="live-indicator" id="live-indicator" style="display:none">
+                    <span class="live-dot"></span><span>Live</span>
                 </div>
             </div>
-        </div>
-
-        <!-- Tabs -->
-        <div class="tabs">
-            <button class="tab active" data-period="6m">6M</button>
-            <button class="tab" data-period="12m">12M</button>
-        </div>
-
-        <!-- Bitcoin Price Chart -->
-        <div class="chart-container">
-            <div class="chart-label">Bitcoin Price (USD)</div>
-            <div class="chart-wrapper">
-                <canvas id="btcChart"></canvas>
+            <div class="stat-card">
+                <div class="stat-label">Trend Index</div>
+                <div class="stat-value index" id="trend-index">--</div>
             </div>
         </div>
-
-        <!-- Trend Index Indicator -->
-        <div class="chart-container">
-            <div class="chart-label">Trend Index</div>
-            <div class="zone-label overheat">과열상태 ▲</div>
-            <div class="chart-wrapper indicator">
-                <canvas id="trendChart"></canvas>
-            </div>
-            <div class="zone-label indifference">무관심 ▼</div>
-        </div>
-
-        <div class="last-updated" id="last-updated"></div>
     </div>
 
-    <script>
-        let chartData = null;
-        let btcChart = null;
-        let trendChart = null;
-        let currentPeriod = '6m';
-        let binanceSocket = null;
-        let livePrice = null;
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" data-period="6m">6M</button>
+        <button class="tab" data-period="12m">12M</button>
+    </div>
 
-        async function loadData() {
-            try {
-                const response = await fetch('data.json');
-                if (!response.ok) throw new Error('Data not found');
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                console.error('Error loading data:', error);
-                return null;
+    <!-- BTC Price Chart -->
+    <div class="card watermark">
+        <div class="chart-label">Bitcoin Price (USD)</div>
+        <div class="chart-wrapper">
+            <canvas id="btcChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Trend Index Chart -->
+    <div class="card watermark">
+        <div class="chart-label">Trend Index</div>
+        <div class="zone-label overheat">과열상태 ▲</div>
+        <div class="chart-wrapper indicator">
+            <canvas id="trendChart"></canvas>
+        </div>
+        <div class="zone-label indifference">무관심 ▼</div>
+    </div>
+
+    <!-- Share -->
+    <div class="share-bar">
+        <button class="share-btn twitter" onclick="shareTwitter()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>트위터</button>
+        <button class="share-btn kakao" onclick="shareKakao()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-5.52 0-10 3.36-10 7.5 0 2.66 1.74 5 4.36 6.33-.14.53-.9 3.4-.93 3.61 0 0-.02.17.09.23.11.07.24.03.24.03.32-.04 3.7-2.42 4.28-2.83.62.09 1.27.13 1.96.13 5.52 0 10-3.36 10-7.5S17.52 3 12 3z"/></svg>카카오톡</button>
+        <button class="share-btn telegram" onclick="shareTelegram()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>텔레그램</button>
+        <button class="share-btn instagram" onclick="shareInstagram(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>인스타그램</button>
+        <button class="share-btn copy" onclick="copyLink(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>링크복사</button>
+    </div>
+
+    <div class="last-updated" id="last-updated"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SHARE_URL = 'https://herdvibe.com/crypto-trend-index';
+const SHARE_TITLE = '크립토 트렌드 인덱스 - Google Trends vs BTC';
+const SHARE_DESC = '구글 트렌드 기반 암호화폐 심리 지표 | Herdvibe';
+
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000)}
+function shareTwitter(){window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(SHARE_TITLE)}&url=${encodeURIComponent(SHARE_URL)}`,'_blank')}
+function shareKakao(){if(window.Kakao&&!Kakao.isInitialized())Kakao.init('a43ed7b39fac35458f4f9df925a279b5');if(window.Kakao){Kakao.Share.sendDefault({objectType:'feed',content:{title:SHARE_TITLE,description:SHARE_DESC,imageUrl:'https://herdvibe.com/og-trend.png',link:{mobileWebUrl:SHARE_URL,webUrl:SHARE_URL}}})}}
+function shareTelegram(){window.open(`https://t.me/share/url?url=${encodeURIComponent(SHARE_URL)}&text=${encodeURIComponent(SHARE_TITLE)}`,'_blank')}
+function shareInstagram(btn){try{if(window.parent!==window){window.parent.postMessage({type:'copy',text:SHARE_URL},'*')}else{navigator.clipboard.writeText(SHARE_URL)}const orig=btn.innerHTML;btn.classList.add('copied');btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>복사됨!';showToast('링크가 복사되었습니다 - 인스타그램에 붙여넣기 하세요 ✓');setTimeout(()=>{btn.classList.remove('copied');btn.innerHTML=orig},2000)}catch(e){showToast('복사 실패')}}
+function copyLink(btn){try{if(window.parent!==window){window.parent.postMessage({type:'copy',text:SHARE_URL},'*')}else{navigator.clipboard.writeText(SHARE_URL)}const orig=btn.innerHTML;btn.classList.add('copied');btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>복사됨!';showToast('링크가 복사되었습니다 ✓');setTimeout(()=>{btn.classList.remove('copied');btn.innerHTML=orig},2000)}catch(e){showToast('복사 실패')}}
+
+// ===== ORIGINAL LOGIC =====
+let chartData=null,btcChart=null,trendChart=null,currentPeriod='6m',binanceSocket=null,livePrice=null;
+
+async function loadData(){try{const r=await fetch('data.json');if(!r.ok)throw new Error('Data not found');return await r.json()}catch(e){console.error('Error:',e);return null}}
+
+function formatPrice(p){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0,maximumFractionDigits:0}).format(p)}
+
+function getDateFromString(s){const p=s.split('-');return new Date(p[0],p[1]-1,p[2])}
+
+function getData(period){
+    if(period==='12m')return{dates:chartData.dates_12m||chartData.dates,btc_prices:chartData.btc_prices_12m||chartData.btc_prices,trend_index:chartData.trend_index_12m||chartData.trend_index};
+    return{dates:chartData.dates,btc_prices:chartData.btc_prices,trend_index:chartData.trend_index};
+}
+
+function updateStats(data){
+    const latestPrice=livePrice||data.btc_prices[data.btc_prices.length-1];
+    const latestIndex=data.trend_index[data.trend_index.length-1];
+    document.getElementById('btc-price').textContent=formatPrice(latestPrice);
+    document.getElementById('trend-index').textContent=latestIndex.toFixed(1);
+}
+
+function connectBinanceWebSocket(){
+    try{
+        binanceSocket=new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker');
+        binanceSocket.onopen=function(){console.log('WS connected');document.getElementById('live-indicator').style.display='inline-flex'};
+        binanceSocket.onmessage=function(e){const d=JSON.parse(e.data);livePrice=parseFloat(d.c);document.getElementById('btc-price').textContent=formatPrice(livePrice)};
+        binanceSocket.onerror=function(e){console.error('WS error:',e)};
+        binanceSocket.onclose=function(){console.log('WS closed');document.getElementById('live-indicator').style.display='none';setTimeout(connectBinanceWebSocket,5000)};
+    }catch(e){console.error('WS fail:',e)}
+}
+
+function createBtcChart(data){
+    const ctx=document.getElementById('btcChart').getContext('2d');
+    if(btcChart)btcChart.destroy();
+    btcChart=new Chart(ctx,{
+        type:'line',
+        data:{labels:data.dates,datasets:[{label:'Bitcoin Price',data:data.btc_prices,borderColor:'#71717a',backgroundColor:'transparent',borderWidth:2,tension:0.4,pointRadius:0,pointHoverRadius:4,pointHoverBackgroundColor:'#71717a'}]},
+        options:{
+            responsive:true,maintainAspectRatio:false,
+            interaction:{mode:'index',intersect:false},
+            plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1a1a',borderColor:'#333',borderWidth:1,titleColor:'#e4e4e7',bodyColor:'#a1a1aa',padding:12,displayColors:false,titleFont:{family:'JetBrains Mono'},bodyFont:{family:'JetBrains Mono'},
+                callbacks:{title:function(c){const d=data.dates[c[0].dataIndex];return getDateFromString(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})},label:function(c){return 'BTC: '+formatPrice(c.raw)}}}},
+            scales:{
+                x:{type:'time',time:{unit:currentPeriod==='12m'?'month':'week',displayFormats:{week:'MMM d',month:'MMM yyyy'}},grid:{color:'#1a1a1a'},ticks:{color:'#71717a',font:{family:"'JetBrains Mono', monospace",size:10},maxTicksLimit:8}},
+                y:{type:'linear',position:'right',grid:{color:'#1a1a1a'},ticks:{color:'#71717a',font:{family:"'JetBrains Mono', monospace",size:10},callback:function(v){return '$'+(v/1000).toFixed(0)+'k'}}}
             }
         }
+    });
+}
 
-        function formatPrice(price) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD',
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
-            }).format(price);
-        }
-
-        function getDateFromString(dateStr) {
-            const parts = dateStr.split('-');
-            return new Date(parts[0], parts[1] - 1, parts[2]);
-        }
-
-        function getData(period) {
-            if (period === '12m') {
-                return {
-                    dates: chartData.dates_12m || chartData.dates,
-                    btc_prices: chartData.btc_prices_12m || chartData.btc_prices,
-                    trend_index: chartData.trend_index_12m || chartData.trend_index
-                };
-            }
-            return {
-                dates: chartData.dates,
-                btc_prices: chartData.btc_prices,
-                trend_index: chartData.trend_index
-            };
-        }
-
-        function updateStats(data) {
-            // Use live price if available, otherwise use chart data
-            const latestPrice = livePrice || data.btc_prices[data.btc_prices.length - 1];
-            const latestIndex = data.trend_index[data.trend_index.length - 1];
-            
-            document.getElementById('btc-price').textContent = formatPrice(latestPrice);
-            document.getElementById('trend-index').textContent = latestIndex.toFixed(1);
-        }
-
-        // Binance WebSocket for real-time BTC price
-        function connectBinanceWebSocket() {
-            try {
-                binanceSocket = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker');
-                
-                binanceSocket.onopen = function() {
-                    console.log('Binance WebSocket connected');
-                    document.getElementById('live-indicator').style.display = 'inline-flex';
-                };
-                
-                binanceSocket.onmessage = function(event) {
-                    const data = JSON.parse(event.data);
-                    livePrice = parseFloat(data.c); // 'c' is the current price
-                    document.getElementById('btc-price').textContent = formatPrice(livePrice);
-                };
-                
-                binanceSocket.onerror = function(error) {
-                    console.error('WebSocket error:', error);
-                };
-                
-                binanceSocket.onclose = function() {
-                    console.log('WebSocket closed, reconnecting in 5s...');
-                    document.getElementById('live-indicator').style.display = 'none';
-                    setTimeout(connectBinanceWebSocket, 5000);
-                };
-            } catch (error) {
-                console.error('Failed to connect WebSocket:', error);
+function createTrendChart(data){
+    const ctx=document.getElementById('trendChart').getContext('2d');
+    if(trendChart)trendChart.destroy();
+    trendChart=new Chart(ctx,{
+        type:'line',
+        data:{labels:data.dates,datasets:[{label:'Trend Index',data:data.trend_index,borderColor:'#a78bfa',backgroundColor:'transparent',borderWidth:2,tension:0.4,pointRadius:0,pointHoverRadius:4,pointHoverBackgroundColor:'#a78bfa'}]},
+        options:{
+            responsive:true,maintainAspectRatio:false,
+            interaction:{mode:'index',intersect:false},
+            plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1a1a',borderColor:'#333',borderWidth:1,titleColor:'#e4e4e7',bodyColor:'#a1a1aa',padding:12,displayColors:false,titleFont:{family:'JetBrains Mono'},bodyFont:{family:'JetBrains Mono'},
+                callbacks:{title:function(c){const d=data.dates[c[0].dataIndex];return getDateFromString(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})},label:function(c){return 'Index: '+c.raw.toFixed(1)}}},
+                annotation:{annotations:{
+                    redZone:{type:'box',yMin:65,yMax:100,backgroundColor:'rgba(239,68,68,0.12)',borderWidth:0},
+                    greenZone:{type:'box',yMin:0,yMax:25,backgroundColor:'rgba(34,197,94,0.12)',borderWidth:0},
+                    redLine:{type:'line',yMin:65,yMax:65,borderColor:'rgba(239,68,68,0.6)',borderWidth:1,borderDash:[5,5]},
+                    greenLine:{type:'line',yMin:25,yMax:25,borderColor:'rgba(34,197,94,0.6)',borderWidth:1,borderDash:[5,5]}
+                }}
+            },
+            scales:{
+                x:{type:'time',time:{unit:currentPeriod==='12m'?'month':'week',displayFormats:{week:'MMM d',month:'MMM yyyy'}},grid:{color:'#1a1a1a'},ticks:{color:'#71717a',font:{family:"'JetBrains Mono', monospace",size:10},maxTicksLimit:8}},
+                y:{type:'linear',position:'right',min:0,max:100,grid:{color:'#1a1a1a'},ticks:{color:'#71717a',font:{family:"'JetBrains Mono', monospace",size:10},stepSize:25}}
             }
         }
+    });
+}
 
-        function createBtcChart(data) {
-            const btcCtx = document.getElementById('btcChart').getContext('2d');
-            
-            if (btcChart) {
-                btcChart.destroy();
-            }
+function switchPeriod(period){
+    currentPeriod=period;
+    const data=getData(period);
+    document.querySelectorAll('.tab').forEach(t=>{t.classList.remove('active');if(t.dataset.period===period)t.classList.add('active')});
+    updateStats(data);createBtcChart(data);createTrendChart(data);
+}
 
-            btcChart = new Chart(btcCtx, {
-                type: 'line',
-                data: {
-                    labels: data.dates,
-                    datasets: [
-                        {
-                            label: 'Bitcoin Price',
-                            data: data.btc_prices,
-                            borderColor: '#71717a',
-                            backgroundColor: 'transparent',
-                            borderWidth: 2,
-                            tension: 0.4,
-                            pointRadius: 0,
-                            pointHoverRadius: 4,
-                            pointHoverBackgroundColor: '#71717a'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            backgroundColor: '#18181b',
-                            borderColor: '#27272a',
-                            borderWidth: 1,
-                            titleColor: '#e4e4e7',
-                            bodyColor: '#a1a1aa',
-                            padding: 12,
-                            displayColors: false,
-                            callbacks: {
-                                title: function(context) {
-                                    const index = context[0].dataIndex;
-                                    const dateStr = data.dates[index];
-                                    const date = getDateFromString(dateStr);
-                                    return date.toLocaleDateString('en-US', {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        year: 'numeric'
-                                    });
-                                },
-                                label: function(context) {
-                                    return 'BTC: ' + formatPrice(context.raw);
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            type: 'time',
-                            time: {
-                                unit: currentPeriod === '12m' ? 'month' : 'week',
-                                displayFormats: {
-                                    week: 'MMM d',
-                                    month: 'MMM yyyy'
-                                }
-                            },
-                            grid: {
-                                color: '#27272a',
-                                drawBorder: false
-                            },
-                            ticks: {
-                                color: '#52525b',
-                                font: {
-                                    family: "'JetBrains Mono', monospace",
-                                    size: 11
-                                },
-                                maxTicksLimit: 8
-                            }
-                        },
-                        y: {
-                            type: 'linear',
-                            position: 'right',
-                            grid: {
-                                color: '#27272a',
-                                drawBorder: false
-                            },
-                            ticks: {
-                                color: '#52525b',
-                                font: {
-                                    family: "'JetBrains Mono', monospace",
-                                    size: 11
-                                },
-                                callback: function(value) {
-                                    return '$' + (value / 1000).toFixed(0) + 'k';
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
+async function init(){
+    chartData=await loadData();
+    if(!chartData||!chartData.dates||chartData.dates.length===0){document.querySelector('.chart-wrapper').innerHTML='<div class="loading"><div class="spinner"></div>데이터 로딩 중...</div>';return}
+    if(chartData.last_updated){document.getElementById('last-updated').textContent='Last updated: '+new Date(chartData.last_updated).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+    switchPeriod('6m');
+    document.querySelectorAll('.tab').forEach(t=>{t.addEventListener('click',()=>{switchPeriod(t.dataset.period)})});
+    connectBinanceWebSocket();
+}
 
-        function createTrendChart(data) {
-            const trendCtx = document.getElementById('trendChart').getContext('2d');
-
-            if (trendChart) {
-                trendChart.destroy();
-            }
-
-            trendChart = new Chart(trendCtx, {
-                type: 'line',
-                data: {
-                    labels: data.dates,
-                    datasets: [
-                        {
-                            label: 'Trend Index',
-                            data: data.trend_index,
-                            borderColor: '#ffffff',
-                            backgroundColor: 'transparent',
-                            borderWidth: 2,
-                            tension: 0.4,
-                            pointRadius: 0,
-                            pointHoverRadius: 4,
-                            pointHoverBackgroundColor: '#ffffff'
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            backgroundColor: '#18181b',
-                            borderColor: '#27272a',
-                            borderWidth: 1,
-                            titleColor: '#e4e4e7',
-                            bodyColor: '#a1a1aa',
-                            padding: 12,
-                            displayColors: false,
-                            callbacks: {
-                                title: function(context) {
-                                    const index = context[0].dataIndex;
-                                    const dateStr = data.dates[index];
-                                    const date = getDateFromString(dateStr);
-                                    return date.toLocaleDateString('en-US', {
-                                        month: 'short',
-                                        day: 'numeric',
-                                        year: 'numeric'
-                                    });
-                                },
-                                label: function(context) {
-                                    return 'Index: ' + context.raw.toFixed(1);
-                                }
-                            }
-                        },
-                        annotation: {
-                            annotations: {
-                                redZone: {
-                                    type: 'box',
-                                    yMin: 65,
-                                    yMax: 100,
-                                    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                                    borderWidth: 0
-                                },
-                                greenZone: {
-                                    type: 'box',
-                                    yMin: 0,
-                                    yMax: 25,
-                                    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-                                    borderWidth: 0
-                                },
-                                redLine: {
-                                    type: 'line',
-                                    yMin: 65,
-                                    yMax: 65,
-                                    borderColor: 'rgba(239, 68, 68, 0.8)',
-                                    borderWidth: 1,
-                                    borderDash: [5, 5]
-                                },
-                                greenLine: {
-                                    type: 'line',
-                                    yMin: 25,
-                                    yMax: 25,
-                                    borderColor: 'rgba(34, 197, 94, 0.8)',
-                                    borderWidth: 1,
-                                    borderDash: [5, 5]
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            type: 'time',
-                            time: {
-                                unit: currentPeriod === '12m' ? 'month' : 'week',
-                                displayFormats: {
-                                    week: 'MMM d',
-                                    month: 'MMM yyyy'
-                                }
-                            },
-                            grid: {
-                                color: '#27272a',
-                                drawBorder: false
-                            },
-                            ticks: {
-                                color: '#52525b',
-                                font: {
-                                    family: "'JetBrains Mono', monospace",
-                                    size: 11
-                                },
-                                maxTicksLimit: 8
-                            }
-                        },
-                        y: {
-                            type: 'linear',
-                            position: 'right',
-                            min: 0,
-                            max: 100,
-                            grid: {
-                                color: '#27272a',
-                                drawBorder: false
-                            },
-                            ticks: {
-                                color: '#52525b',
-                                font: {
-                                    family: "'JetBrains Mono', monospace",
-                                    size: 11
-                                },
-                                stepSize: 25
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        function switchPeriod(period) {
-            currentPeriod = period;
-            const data = getData(period);
-            
-            // Update tabs
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-                if (tab.dataset.period === period) {
-                    tab.classList.add('active');
-                }
-            });
-
-            // Update charts
-            updateStats(data);
-            createBtcChart(data);
-            createTrendChart(data);
-        }
-
-        async function init() {
-            chartData = await loadData();
-            
-            if (!chartData || !chartData.dates || chartData.dates.length === 0) {
-                document.querySelector('.chart-wrapper').innerHTML = 
-                    '<div class="loading">Loading chart data...</div>';
-                return;
-            }
-
-            // Update last updated time
-            if (chartData.last_updated) {
-                document.getElementById('last-updated').textContent = 
-                    `Last updated: ${new Date(chartData.last_updated).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    })}`;
-            }
-
-            // Initialize with 6m view
-            switchPeriod('6m');
-
-            // Tab click handlers
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.addEventListener('click', () => {
-                    switchPeriod(tab.dataset.period);
-                });
-            });
-
-            // Connect to Binance WebSocket for real-time price
-            connectBinanceWebSocket();
-        }
-
-        init();
-    </script>
+init();
+</script>
 </body>
 </html>
