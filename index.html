@@ -8,7 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -17,8 +17,8 @@ html::-webkit-scrollbar{display:none}
 body{background:#000;color:#e4e4e7;font-family:'Noto Sans KR',sans-serif;min-height:100vh}
 
 /* Nav */
-.top-nav{position:sticky;top:0;z-index:100;background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);border-bottom:1px solid #1a1a1a;padding:0 16px;display:flex;align-items:center;justify-content:center;height:52px}
-.nav-title{font-size:14px;font-weight:600;color:#e4e4e7;white-space:nowrap}
+.top-nav{position:sticky;top:0;z-index:100;background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);border-bottom:1px solid #1a1a1a;padding:0 16px;display:flex;align-items:center;justify-content:center;height:56px}
+.nav-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.3rem;font-weight:600;color:#e4e4e7;white-space:nowrap}
 
 /* Container */
 .container{max-width:960px;margin:0 auto;padding:16px 12px 60px}
@@ -47,8 +47,8 @@ body{background:#000;color:#e4e4e7;font-family:'Noto Sans KR',sans-serif;min-hei
 .card{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:12px;padding:16px;margin-bottom:16px;position:relative}
 
 /* Chart */
-.chart-wrapper{position:relative;height:350px}
-.chart-wrapper.indicator{height:175px}
+.chart-wrapper{position:relative;height:420px}
+.chart-wrapper.indicator{height:220px}
 .chart-label{font-size:11px;color:#71717a;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:500}
 
 /* Zone labels */
@@ -82,14 +82,14 @@ body{background:#000;color:#e4e4e7;font-family:'Noto Sans KR',sans-serif;min-hei
 @keyframes spin{to{transform:rotate(360deg)}}
 
 @media(max-width:640px){
-  .top-nav{padding:0 10px}
-  .nav-title{font-size:12px}
+  .top-nav{padding:0 10px;height:52px}
+  .nav-title{font-size:1.1rem}
   .header{flex-direction:column}
   .stats{width:100%;justify-content:space-between}
   .stat-card{text-align:left;flex:1}
   .stat-value{font-size:16px}
-  .chart-wrapper{height:280px}
-  .chart-wrapper.indicator{height:140px}
+  .chart-wrapper{height:340px}
+  .chart-wrapper.indicator{height:180px}
   .watermark::after{font-size:20px}
 }
 </style>
@@ -170,7 +170,6 @@ function shareTelegram(){window.open(`https://t.me/share/url?url=${encodeURIComp
 function shareInstagram(btn){try{if(window.parent!==window){window.parent.postMessage({type:'copy',text:SHARE_URL},'*')}else{navigator.clipboard.writeText(SHARE_URL)}const orig=btn.innerHTML;btn.classList.add('copied');btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>복사됨!';showToast('링크가 복사되었습니다 - 인스타그램에 붙여넣기 하세요 ✓');setTimeout(()=>{btn.classList.remove('copied');btn.innerHTML=orig},2000)}catch(e){showToast('복사 실패')}}
 function copyLink(btn){try{if(window.parent!==window){window.parent.postMessage({type:'copy',text:SHARE_URL},'*')}else{navigator.clipboard.writeText(SHARE_URL)}const orig=btn.innerHTML;btn.classList.add('copied');btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>복사됨!';showToast('링크가 복사되었습니다 ✓');setTimeout(()=>{btn.classList.remove('copied');btn.innerHTML=orig},2000)}catch(e){showToast('복사 실패')}}
 
-// ===== ORIGINAL LOGIC =====
 let chartData=null,btcChart=null,trendChart=null,currentPeriod='6m',binanceSocket=null,livePrice=null;
 
 async function loadData(){try{const r=await fetch('data.json');if(!r.ok)throw new Error('Data not found');return await r.json()}catch(e){console.error('Error:',e);return null}}
