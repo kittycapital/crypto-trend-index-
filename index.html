@@ -14,7 +14,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html{scrollbar-width:none}
 html::-webkit-scrollbar{display:none}
-body{background:#000;color:#e4e4e7;font-family:'Noto Sans KR',sans-serif;min-height:100vh}
+body{background:#000;color:#e4e4e7;font-family:'Noto Sans KR',sans-serif}
 
 /* Nav */
 .top-nav{position:sticky;top:0;z-index:100;background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);border-bottom:1px solid #1a1a1a;padding:0 16px;display:flex;align-items:center;justify-content:center;height:56px}
@@ -262,6 +262,15 @@ async function init(){
 }
 
 init();
+</script>
+<script>
+function sendHeight(){
+  var h=document.documentElement.scrollHeight;
+  window.parent.postMessage({type:'resize',height:h},'*');
+}
+window.addEventListener('load',function(){sendHeight();setTimeout(sendHeight,500);setTimeout(sendHeight,1500)});
+window.addEventListener('resize',sendHeight);
+new MutationObserver(sendHeight).observe(document.body,{childList:true,subtree:true,attributes:true});
 </script>
 </body>
 </html>
